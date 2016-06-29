@@ -90,6 +90,8 @@ export async function install(baseDir) {
     console.log(output);
     var {output} = await copyPartsBinItemIfMissing("https://dev.lively-web.org/", "PartsBin/lively.modules", "mocha-test-runner", livelyDir, {log: log});
     console.log(output);
+    var {output} = await copyPartsBinItemIfMissing("https://dev.lively-web.org/", "PartsBin/lively.modules", "ModuleEditor", livelyDir, {log: log});
+    console.log(output);
 
     console.log("=> Downloading lively.system worlds...\n")
     var {output} = await copyLivelyWorldIfMissing("https://dev.lively-web.org/", "development.html", livelyDir, {log: log});
