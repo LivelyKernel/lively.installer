@@ -110,6 +110,13 @@
   {
     "name": "lively.components",
     "repoURL": "https://github.com/LivelyKernel/lively.components"
+  },
+  {
+    "name": "lively.ide",
+    "repoURL": "https://github.com/LivelyKernel/lively.ide"
+  },
+  {
+    "name": "lively.halos",
+    "repoURL": "https://github.com/LivelyKernel/lively.halos"
   }
 ]
-
