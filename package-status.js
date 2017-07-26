@@ -4,8 +4,8 @@ import { join } from "./helpers.js";
 import { Package } from "./package.js";
 import { TextFlow } from "./morphic-helpers.js";
 import { resource } from "lively.resources";
-import { runCommand } from "../lively.morphic/ide/shell/shell-interface.js";
-import Terminal from "../lively.morphic/ide/shell/terminal.js";
+import { runCommand } from "lively.ide/shell/shell-interface.js";
+import Terminal from "lively.ide/shell/terminal.js";
 import { pt } from "lively.graphics";
 
 
@@ -139,7 +139,7 @@ export class ReporterWidget {
             textMode: "text",
             extent: pt(700,600)
           })), {p}), this.textFlow.br);
-    
+
     // local changes + diff button
     report = report.concat(
       "local changes to commit?",

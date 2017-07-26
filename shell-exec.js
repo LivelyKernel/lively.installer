@@ -4,7 +4,7 @@ export async function exec(cmdString, opts) {
   opts = Object.assign({cwd: undefined, log: []}, opts)
 
   opts.log && opts.log.push(`$ ${cmdString}\n`);
-  
+
   if (System.get("@system-env").node) {
     var proc, e, stdout, stderr;
     await new Promise((resolve, reject) =>
@@ -16,7 +16,7 @@ export async function exec(cmdString, opts) {
       stdout: stdout };
     opts.log.push(cmd.output);
   } else {
-    let { runCommand } = await System.import("lively.morphic/ide/shell/shell-interface.js");
+    let { runCommand } = await System.import("lively.ide/shell/shell-interface.js");
     var cmd = await runCommand(cmdString, {cwd: opts.cwd});
     if (opts.log) {
       cmd.on("stdout", out => opts.log.push(out));
