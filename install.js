@@ -26,6 +26,7 @@ export async function install(baseDir, dependenciesDir, verbose) {
       step4_installPackageDeps = true,
       step5_runPackageInstallScripts = true,
       step6_syncWithObjectDB = true,
+      step6_filteredSync = false,
       step7_setupAssets = true,
       step8_runPackageBuildScripts = true;
 
@@ -148,6 +149,10 @@ export async function install(baseDir, dependenciesDir, verbose) {
       console.log(`=> synchronizing with object database from lively-next.org...`);
       await setupSystem(baseDir);
       await replicateObjectDB(baseDir, packageMap);
+    } else if (step6_filteredSync) {
+      console.log(`=> doing a filtered synchronization with object database from lively-next.org...`);
+      await setupSystem(baseDir);
+      await replicateObjectDB(baseDir, packageMap, ['part/save world dialog', 'part/PartsBin']);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -247,7 +252,7 @@ function setupSystem(baseURL) {
   return registry.update();
 }
 
-async function replicateObjectDB(baseDir, packageMap) {
+async function replicateObjectDB(baseDir, packageMap, filterList) {
   console.time("replication");
 
   // FIXME...!
@@ -269,7 +274,10 @@ async function replicateObjectDB(baseDir, packageMap) {
       toSnapshotLocation = resource("https://lively-next.org/lively.morphic/objectdb/morphicdb/snapshots/");
 
   try {
-    let sync = db.replicateFrom(remoteCommitDB, remoteVersionDB, toSnapshotLocation, {debug: false, retry: true, live: true});
+    let replicationFilter = filterList instanceof Array ? {
+      onlyTypesAndNames: Object.assign(...filterList.map(entry => ({[entry]: true})))
+    } : undefined
+    let sync = db.replicateFrom(remoteCommitDB, remoteVersionDB, toSnapshotLocation, {debug: false, retry: true, live: true, replicationFilter});
     
     await sync.whenPaused();
     await sync.safeStop();
