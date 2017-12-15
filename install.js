@@ -152,7 +152,71 @@ export async function install(baseDir, dependenciesDir, verbose) {
     } else if (step6_filteredSync) {
       console.log(`=> doing a filtered synchronization with object database from lively-next.org...`);
       await setupSystem(baseDir);
-      await replicateObjectDB(baseDir, packageMap, ['part/save world dialog', 'part/PartsBin']);
+      await replicateObjectDB(baseDir, packageMap, [
+        // (default) world related
+        'world/default',
+        'part/save world dialog',
+        'part/world-list',
+        'part/world preview',
+
+        // PartsBin related
+        'part/PartsBin',
+        'part/partsbin preview',
+        'part/publish part dialog',
+        'part/object version viewer',
+
+        // file upload related
+        'part/upload-indicator',
+        'part/video morph',
+        'part/html-morph',
+        'part/progress bar',
+
+        // core ui related
+        'part/tab-buttons',
+
+        // tool related
+        'part/Console',
+        'part/text merger',
+        'part/scene graph inspector',
+        'part/code search',
+        'part/grep search',
+        'part/L2LViewer',
+        'part/Lively Chat',
+
+        // basic parts
+        'part/Canvas',
+        'part/arrow',
+        'part/bidirectional arrow',
+        'part/curved arrow',
+        'part/ellipse',
+        'part/html-morph',
+        'part/iframe morph',
+        'part/image',
+        'part/polygon',
+        'part/rectangle',
+        'part/star',
+        'part/text',
+
+        // basic widgets
+        'part/input-line',
+        'part/ColorPickerField',
+        'part/button',
+        'part/checkbox',
+        'part/dropdown list',
+        'part/filterable list',
+        'part/label',
+        'part/labeled checkbox',
+        'part/list',
+        'part/password input',
+        'part/progress bar',
+        'part/scrollable text',
+        'part/search-input',
+        'part/slider',
+        'part/tab-buttons',
+        'part/text align tabs',
+        'part/text document',
+        'part/tree'
+      ]);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
