@@ -8,6 +8,14 @@ var resource = lively.resources.resource,
     packageSpecFile = getPackageSpec(),
     timestamp = new Date().toJSON().replace(/[\.\:]/g, "_");
 
+var localCommitDBUrl = null,
+    localVersionDBUrl = null,
+    localSnapshotLocation = null;
+
+var remoteCommitDBUrl = "https://sofa.lively-next.org/objectdb-morphicdb-commits",
+    remoteVersionDBUrl = "https://sofa.lively-next.org/objectdb-morphicdb-version-graph",
+    remoteSnapshotLocation = "https://lively-next.org/lively.morphic/objectdb/morphicdb/snapshots/";
+
 // var baseDir = "/home/lively/lively-web.org/lively.next/";
 // var baseDir = "/Users/robert/Lively/lively-dev4/";
 // var dependenciesDir = "/Users/robert/Lively/lively-dev4/lively.next-node_modules";
@@ -326,22 +334,38 @@ async function replicateObjectDB(baseDir, packageMap, filterList) {
   if (!global.navigator) global.navigator = {};
     
   let { ObjectDB, Database } = await lively.modules.importPackage(join(baseDir, "/lively.storage/"));
-  await resource(baseDir).join("lively.morphic/objectdb/morphicdb/snapshots/").ensureExistance();
-  await resource(baseDir).join("lively.morphic/objectdb/morphicdb-commits/").ensureExistance();
-  await resource(baseDir).join("lively.morphic/objectdb/morphicdb-version-graph/").ensureExistance();
+
+  let localCommitRes = localCommitDBUrl ? resource(localCommitDBUrl) :
+    resource(baseDir).join("lively.morphic/objectdb/morphicdb-commits/");
+  if (localCommitRes.isNodeJSFileResource) {
+    await localCommitRes.ensureExistance();
+  }
+  let localVersionRes = localVersionDBUrl ? resource(localVersionDBUrl) :
+    resource(baseDir).join("lively.morphic/objectdb/morphicdb-version-graph/");
+  if (localVersionRes.isNodeJSFileResource) {
+    await localVersionRes.ensureExistance();
+  }
+  let localSnapshotUrl = localSnapshotLocation ? resource(localSnapshotLocation) :
+    resource(baseDir).join("lively.morphic/objectdb/morphicdb/snapshots/");
+  if (localSnapshotUrl.isNodeJSFileResource) {
+    await localSnapshotUrl.ensureExistance();
+  }
+
   let db = ObjectDB.named("lively.morphic/objectdb/morphicdb", {
-    snapshotLocation: resource(System.decanonicalize(baseDir + "/lively.morphic/objectdb/morphicdb/snapshots/"))
+    commitDB: localCommitRes.url,
+    versionDB: localVersionRes.url,
+    snapshotLocation: localSnapshotUrl
   });
 
-  let remoteCommitDB = Database.ensureDB("https://sofa.lively-next.org/objectdb-morphicdb-commits"),
-      remoteVersionDB = Database.ensureDB("https://sofa.lively-next.org/objectdb-morphicdb-version-graph"),
-      toSnapshotLocation = resource("https://lively-next.org/lively.morphic/objectdb/morphicdb/snapshots/");
+  let remoteCommitDB = Database.ensureDB(remoteCommitDBUrl),
+      remoteVersionDB = Database.ensureDB(remoteVersionDBUrl),
+      fromSnapshotLocation = resource(remoteSnapshotLocation);
 
   try {
     let replicationFilter = filterList instanceof Array ? {
       onlyTypesAndNames: Object.assign(...filterList.map(entry => ({[entry]: true})))
     } : undefined
-    let sync = db.replicateFrom(remoteCommitDB, remoteVersionDB, toSnapshotLocation, {debug: false, retry: true, live: true, replicationFilter});
+    let sync = db.replicateFrom(remoteCommitDB, remoteVersionDB, fromSnapshotLocation, {debug: false, retry: true, live: true, replicationFilter});
     
     await sync.whenPaused();
     await sync.safeStop();
