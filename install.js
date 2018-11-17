@@ -8,6 +8,14 @@ var resource = lively.resources.resource,
     packageSpecFile = getPackageSpec(),
     timestamp = new Date().toJSON().replace(/[\.\:]/g, "_");
 
+var localCommitDBUrl = null,
+    localVersionDBUrl = null,
+    localSnapshotLocation = null;
+
+var remoteCommitDBUrl = "https://sofa.lively-next.org/objectdb-morphicdb-commits",
+    remoteVersionDBUrl = "https://sofa.lively-next.org/objectdb-morphicdb-version-graph",
+    remoteSnapshotLocation = "https://lively-next.org/lively.morphic/objectdb/morphicdb/snapshots/";
+
 // var baseDir = "/home/lively/lively-web.org/lively.next/";
 // var baseDir = "/Users/robert/Lively/lively-dev4/";
 // var dependenciesDir = "/Users/robert/Lively/lively-dev4/lively.next-node_modules";
@@ -26,6 +34,7 @@ export async function install(baseDir, dependenciesDir, verbose) {
       step4_installPackageDeps = true,
       step5_runPackageInstallScripts = true,
       step6_syncWithObjectDB = true,
+      step6_filteredSync = false,
       step7_setupAssets = true,
       step8_runPackageBuildScripts = true;
 
@@ -148,6 +157,74 @@ export async function install(baseDir, dependenciesDir, verbose) {
       console.log(`=> synchronizing with object database from lively-next.org...`);
       await setupSystem(baseDir);
       await replicateObjectDB(baseDir, packageMap);
+    } else if (step6_filteredSync) {
+      console.log(`=> doing a filtered synchronization with object database from lively-next.org...`);
+      await setupSystem(baseDir);
+      await replicateObjectDB(baseDir, packageMap, [
+        // (default) world related
+        'world/default',
+        'part/save world dialog',
+        'part/world-list',
+        'part/world preview',
+
+        // PartsBin related
+        'part/PartsBin',
+        'part/partsbin preview',
+        'part/publish part dialog',
+        'part/object version viewer',
+
+        // file upload related
+        'part/upload-indicator',
+        'part/video morph',
+        'part/html-morph',
+        'part/progress bar',
+
+        // core ui related
+        'part/tab-buttons',
+
+        // tool related
+        'part/Console',
+        'part/text merger',
+        'part/scene graph inspector',
+        'part/code search',
+        'part/grep search',
+        'part/L2LViewer',
+        'part/Lively Chat',
+
+        // basic parts
+        'part/Canvas',
+        'part/arrow',
+        'part/bidirectional arrow',
+        'part/curved arrow',
+        'part/ellipse',
+        'part/html-morph',
+        'part/iframe morph',
+        'part/image',
+        'part/polygon',
+        'part/rectangle',
+        'part/star',
+        'part/text',
+
+        // basic widgets
+        'part/input-line',
+        'part/ColorPickerField',
+        'part/button',
+        'part/checkbox',
+        'part/dropdown list',
+        'part/filterable list',
+        'part/label',
+        'part/labeled checkbox',
+        'part/list',
+        'part/password input',
+        'part/progress bar',
+        'part/scrollable text',
+        'part/search-input',
+        'part/slider',
+        'part/tab-buttons',
+        'part/text align tabs',
+        'part/text document',
+        'part/tree'
+      ]);
     }
 
     // -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
@@ -247,7 +324,7 @@ function setupSystem(baseURL) {
   return registry.update();
 }
 
-async function replicateObjectDB(baseDir, packageMap) {
+async function replicateObjectDB(baseDir, packageMap, filterList) {
   console.time("replication");
 
   // FIXME...!
@@ -257,19 +334,38 @@ async function replicateObjectDB(baseDir, packageMap) {
   if (!global.navigator) global.navigator = {};
     
   let { ObjectDB, Database } = await lively.modules.importPackage(join(baseDir, "/lively.storage/"));
-  await resource(baseDir).join("lively.morphic/objectdb/morphicdb/snapshots/").ensureExistance();
-  await resource(baseDir).join("lively.morphic/objectdb/morphicdb-commits/").ensureExistance();
-  await resource(baseDir).join("lively.morphic/objectdb/morphicdb-version-graph/").ensureExistance();
+
+  let localCommitRes = localCommitDBUrl ? resource(localCommitDBUrl) :
+    resource(baseDir).join("lively.morphic/objectdb/morphicdb-commits/");
+  if (localCommitRes.isNodeJSFileResource) {
+    await localCommitRes.ensureExistance();
+  }
+  let localVersionRes = localVersionDBUrl ? resource(localVersionDBUrl) :
+    resource(baseDir).join("lively.morphic/objectdb/morphicdb-version-graph/");
+  if (localVersionRes.isNodeJSFileResource) {
+    await localVersionRes.ensureExistance();
+  }
+  let localSnapshotUrl = localSnapshotLocation ? resource(localSnapshotLocation) :
+    resource(baseDir).join("lively.morphic/objectdb/morphicdb/snapshots/");
+  if (localSnapshotUrl.isNodeJSFileResource) {
+    await localSnapshotUrl.ensureExistance();
+  }
+
   let db = ObjectDB.named("lively.morphic/objectdb/morphicdb", {
-    snapshotLocation: resource(System.decanonicalize(baseDir + "/lively.morphic/objectdb/morphicdb/snapshots/"))
+    commitDB: localCommitRes.url,
+    versionDB: localVersionRes.url,
+    snapshotLocation: localSnapshotUrl
   });
 
-  let remoteCommitDB = Database.ensureDB("https://sofa.lively-next.org/objectdb-morphicdb-commits"),
-      remoteVersionDB = Database.ensureDB("https://sofa.lively-next.org/objectdb-morphicdb-version-graph"),
-      toSnapshotLocation = resource("https://lively-next.org/lively.morphic/objectdb/morphicdb/snapshots/");
+  let remoteCommitDB = Database.ensureDB(remoteCommitDBUrl),
+      remoteVersionDB = Database.ensureDB(remoteVersionDBUrl),
+      fromSnapshotLocation = resource(remoteSnapshotLocation);
 
   try {
-    let sync = db.replicateFrom(remoteCommitDB, remoteVersionDB, toSnapshotLocation, {debug: false, retry: true, live: true});
+    let replicationFilter = filterList instanceof Array ? {
+      onlyTypesAndNames: Object.assign(...filterList.map(entry => ({[entry]: true})))
+    } : undefined
+    let sync = db.replicateFrom(remoteCommitDB, remoteVersionDB, fromSnapshotLocation, {debug: false, retry: true, live: true, replicationFilter});
     
     await sync.whenPaused();
     await sync.safeStop();
